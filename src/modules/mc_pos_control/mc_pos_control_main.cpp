@@ -73,6 +73,12 @@
 #include <uORB/topics/actuator_armed.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/vehicle_local_position.h>
+
+
+//-----------------------------------------------------
+#include <uORB/topics/uav_position_setpoint.h>
+//-----------------------------------------------------
+
 #include <uORB/topics/position_setpoint_triplet.h>
 #include <uORB/topics/vehicle_global_velocity_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
@@ -133,6 +139,11 @@ private:
 	int		_manual_sub;			/**< notification of manual control updates */
 	int		_arming_sub;			/**< arming status of outputs */
 	int		_local_pos_sub;			/**< vehicle local position */
+
+//-------------------------------------------
+    int     _uav_position_setpoint_sub;
+//-------------------------------------------
+
 	int		_pos_sp_triplet_sub;		/**< position setpoint triplet */
 	int		_local_pos_sp_sub;		/**< offboard local position setpoint */
 	int		_global_vel_sp_sub;		/**< offboard global velocity setpoint */
@@ -148,6 +159,13 @@ private:
 	struct vehicle_control_mode_s			_control_mode;		/**< vehicle control mode */
 	struct actuator_armed_s				_arming;		/**< actuator arming status */
 	struct vehicle_local_position_s			_local_pos;		/**< vehicle local position */
+
+
+//-------------------------------------------------------------
+    struct uav_position_setpoint_s          _xyz_data;
+//-------------------------------------------------------------
+
+
 	struct position_setpoint_triplet_s		_pos_sp_triplet;	/**< vehicle global position setpoint triplet */
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct vehicle_global_velocity_setpoint_s	_global_vel_sp;		/**< vehicle global velocity setpoint */
@@ -311,6 +329,13 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_manual_sub(-1),
 	_arming_sub(-1),
 	_local_pos_sub(-1),
+
+
+//-------------------------------------------
+    _uav_position_setpoint_sub(-1),
+//-------------------------------------------
+
+
 	_pos_sp_triplet_sub(-1),
 	_global_vel_sp_sub(-1),
 
@@ -334,6 +359,13 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	memset(&_control_mode, 0, sizeof(_control_mode));
 	memset(&_arming, 0, sizeof(_arming));
 	memset(&_local_pos, 0, sizeof(_local_pos));
+
+
+//------------------------------------------------------
+    memset(&_xyz_data, 0, sizeof(_xyz_data));
+//------------------------------------------------------
+
+
 	memset(&_pos_sp_triplet, 0, sizeof(_pos_sp_triplet));
 	memset(&_local_pos_sp, 0, sizeof(_local_pos_sp));
 	memset(&_global_vel_sp, 0, sizeof(_global_vel_sp));
@@ -528,6 +560,15 @@ MulticopterPositionControl::poll_subscriptions()
 	if (updated) {
 		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
 	}
+
+
+//--------------------------------------------------------------------------------------
+	if (updated) {
+		orb_copy(ORB_ID(uav_position_setpoint), _uav_position_setpoint_sub, &_xyz_data);
+	}
+//--------------------------------------------------------------------------------------
+
+
 }
 
 float
@@ -930,6 +971,13 @@ MulticopterPositionControl::task_main()
 	_manual_sub = orb_subscribe(ORB_ID(manual_control_setpoint));
 	_arming_sub = orb_subscribe(ORB_ID(actuator_armed));
 	_local_pos_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+
+
+//----------------------------------------------------------------------------------
+    _uav_position_setpoint_sub = orb_subscribe(ORB_ID(uav_position_setpoint));
+//---------------------------------------------------------------------------------
+
+
 	_pos_sp_triplet_sub = orb_subscribe(ORB_ID(position_setpoint_triplet));
 	_local_pos_sp_sub = orb_subscribe(ORB_ID(vehicle_local_position_setpoint));
 	_global_vel_sp_sub = orb_subscribe(ORB_ID(vehicle_global_velocity_setpoint));
@@ -948,6 +996,12 @@ MulticopterPositionControl::task_main()
 	bool reset_int_xy = true;
 	bool reset_yaw_sp = true;
 	bool was_armed = false;
+
+
+    bool flag_temp1 = false;
+    bool flag_temp2 = false;
+    bool flag_temp3 = false;
+
 
 	hrt_abstime t_prev = 0;
 
@@ -983,6 +1037,7 @@ MulticopterPositionControl::task_main()
 		hrt_abstime t = hrt_absolute_time();
 		float dt = t_prev != 0 ? (t - t_prev) * 0.000001f : 0.0f;
 		t_prev = t;
+        //printf("pos_dt:%.8f\n", (double)dt);
 
 		if (_control_mode.flag_armed && !was_armed) {
 			/* reset setpoints and integrals on arming */
@@ -1011,6 +1066,17 @@ MulticopterPositionControl::task_main()
 		    _control_mode.flag_control_climb_rate_enabled ||
 		    _control_mode.flag_control_velocity_enabled) {
 
+
+             //-------------------------------------------------------------
+            flag_temp1 = _control_mode.flag_control_altitude_enabled;
+            flag_temp2 = _control_mode.flag_control_position_enabled;
+            flag_temp3 = _control_mode.flag_control_velocity_enabled;
+            _control_mode.flag_control_altitude_enabled = true;
+            _control_mode.flag_control_position_enabled = true;
+            _control_mode.flag_control_velocity_enabled = true;
+            //----------------------------------------------------------------
+           
+
 			_pos(0) = _local_pos.x;
 			_pos(1) = _local_pos.y;
 			_pos(2) = _local_pos.z;
@@ -1022,21 +1088,38 @@ MulticopterPositionControl::task_main()
 			_vel_ff.zero();
 			_sp_move_rate.zero();
 
+            
+            //------------------------------------------
 			/* select control source */
-			if (_control_mode.flag_control_manual_enabled) {
+			//if (_control_mode.flag_control_manual_enabled) {
 				/* manual control */
-				control_manual(dt);
-				_mode_auto = false;
+			//	control_manual(dt);
+			//	_mode_auto = false;
 
-			} else if (_control_mode.flag_control_offboard_enabled) {
+			//} else if (_control_mode.flag_control_offboard_enabled) {
 				/* offboard control */
-				control_offboard(dt);
-				_mode_auto = false;
+			///	control_offboard(dt);
+		//		_mode_auto = false;
 
-			} else {
+		//	} else {
 				/* AUTO */
-				control_auto(dt);
-			}
+		//		control_auto(dt);
+		//	}
+            //-------------------------------------------
+            /*
+            _pos_sp(0) = 0.05;
+            _pos_sp(1) = 0.3;
+            _pos_sp(2) = -0.4;
+            _att_sp.yaw_body = -1.57;
+            */
+            //-------------------------------------------
+            _pos_sp(0) = _xyz_data.x_d;
+            _pos_sp(1) = _xyz_data.y_d;
+            _pos_sp(2) = _xyz_data.z_d;
+            _att_sp.yaw_body = _xyz_data.yaw_d;
+            //-------------------------------------------
+
+
 
 			if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_IDLE) {
 				/* idle state, don't run controller and set zero thrust */
@@ -1392,6 +1475,14 @@ MulticopterPositionControl::task_main()
 				_local_pos_sp_pub = orb_advertise(ORB_ID(vehicle_local_position_setpoint), &_local_pos_sp);
 			}
 
+            
+            //---------------------------------------------------------------
+            _control_mode.flag_control_altitude_enabled = flag_temp1;
+            _control_mode.flag_control_position_enabled = flag_temp2;
+            _control_mode.flag_control_velocity_enabled = flag_temp3;
+            //---------------------------------------------------------------
+
+
 		} else {
 			/* position controller disabled, reset setpoints */
 			_reset_alt_sp = true;
@@ -1401,8 +1492,12 @@ MulticopterPositionControl::task_main()
 			reset_int_xy = true;
 		}
 
+
+//----------------------------------------------------------------------------------------------------------------------------
 		/* generate attitude setpoint from manual controls */
-		if(_control_mode.flag_control_manual_enabled && _control_mode.flag_control_attitude_enabled) {
+		if(_control_mode.flag_control_manual_enabled && _control_mode.flag_control_attitude_enabled && !_control_mode.flag_control_climb_rate_enabled) {
+//-----------------------------------------------------------------------------------------------------------------------------
+
 
 			/* reset yaw setpoint to current position if needed */
 			if (reset_yaw_sp) {
@@ -1560,3 +1655,4 @@ int mc_pos_control_main(int argc, char *argv[])
 	warnx("unrecognized command");
 	return 1;
 }
+

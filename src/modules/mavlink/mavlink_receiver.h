@@ -75,6 +75,13 @@
 #include <uORB/topics/time_offset.h>
 #include <uORB/topics/distance_sensor.h>
 
+
+//---------------------------------------------------------------
+#include <uORB/topics/uav_position_feedback.h>
+#include <uORB/topics/uav_position_setpoint.h>
+//----------------------------------------------------------------
+
+
 #include "mavlink_ftp.h"
 
 #define PX4_EPOCH_SECS 1234567890ULL
@@ -138,6 +145,13 @@ private:
 	void handle_message_hil_state_quaternion(mavlink_message_t *msg);
 	void handle_message_distance_sensor(mavlink_message_t *msg);
 
+
+//------------------------------------------------------------------------------    
+    void handle_message_uav_position_feedback(mavlink_message_t *msg);
+    void handle_message_uav_position_setpoint(mavlink_message_t *msg);
+//------------------------------------------------------------------------------
+
+
 	void *receive_thread(void *arg);
 
 	/**
@@ -193,6 +207,13 @@ private:
 	orb_advert_t _manual_pub;
 	orb_advert_t _land_detector_pub;
 	orb_advert_t _time_offset_pub;
+
+
+//----------------------------------------------------
+    orb_advert_t _uav_position_feedback_pub;
+    orb_advert_t _uav_position_setpoint_pub;
+//-----------------------------------------------------
+
 	int _control_mode_sub;
 	int _hil_frames;
 	uint64_t _old_timestamp;

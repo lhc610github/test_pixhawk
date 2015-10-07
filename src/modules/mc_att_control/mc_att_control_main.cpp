@@ -788,7 +788,14 @@ MulticopterAttitudeControl::task_main()
 		if (fds[0].revents & POLLIN) {
 			static uint64_t last_run = 0;
 			float dt = (hrt_absolute_time() - last_run) / 1000000.0f;
-			last_run = hrt_absolute_time();
+
+
+            //-------------------------------------------------------------------
+            //printf("att_dt:%.8f\n", (double)dt);
+			//-------------------------------------------------------------------
+            
+            
+            last_run = hrt_absolute_time();
 
 			/* guard against too small (< 2ms) and too large (> 20ms) dt's */
 			if (dt < 0.002f) {

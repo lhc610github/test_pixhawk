@@ -89,6 +89,8 @@ __BEGIN_DECLS
 
 __END_DECLS
 
+//static int demo_i = 0; 
+
 static const float mg2ms2 = CONSTANTS_ONE_G / 1000.0f;
 
 MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
@@ -125,6 +127,14 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 	_manual_pub(nullptr),
 	_land_detector_pub(nullptr),
 	_time_offset_pub(nullptr),
+
+
+//---------------------------------------------------------------------
+    _uav_position_feedback_pub(nullptr),
+    _uav_position_setpoint_pub(nullptr),
+//----------------------------------------------------------------------
+
+
 	_control_mode_sub(orb_subscribe(ORB_ID(vehicle_control_mode))),
 	_hil_frames(0),
 	_old_timestamp(0),
@@ -150,6 +160,7 @@ MavlinkReceiver::~MavlinkReceiver()
 void
 MavlinkReceiver::handle_message(mavlink_message_t *msg)
 {
+
 	switch (msg->msgid) {
 	case MAVLINK_MSG_ID_COMMAND_LONG:
 		handle_message_command_long(msg);
@@ -223,6 +234,20 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_distance_sensor(msg);
 		break;
 
+    
+//----------------------------------------------------------------------
+    case MAVLINK_MSG_ID_UAV_POSITION_FEEDBACK:
+        handle_message_uav_position_feedback(msg);
+        break;
+
+    case MAVLINK_MSG_ID_UAV_POSITION_SETPOINT:
+        //printf("\n----%d----\n", ++demo_i);
+        handle_message_uav_position_setpoint(msg);
+        //printf("\n----%d----\n", demo_i);
+        break;
+//----------------------------------------------------------------------
+
+
 	default:
 		break;
 	}
@@ -273,6 +298,62 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 	   This is used in the '-w' command-line flag. */
 	_mavlink->set_has_received_messages(true);
 }
+
+
+//---------------------------------------------------------------------------------------------------------------------
+void
+MavlinkReceiver::handle_message_uav_position_setpoint(mavlink_message_t *msg)
+{
+    mavlink_uav_position_setpoint_t xyz_data_mavlink;
+    mavlink_msg_uav_position_setpoint_decode(msg, &xyz_data_mavlink);
+
+    struct uav_position_setpoint_s xyz_data_orb;
+    memset(&xyz_data_orb, 0, sizeof(xyz_data_orb));
+
+    xyz_data_orb.x_d = xyz_data_mavlink.x_d;
+    xyz_data_orb.y_d = xyz_data_mavlink.y_d;
+    xyz_data_orb.z_d = xyz_data_mavlink.z_d;
+    xyz_data_orb.yaw_d = xyz_data_mavlink.yaw_d;
+
+	printf("aaaaaaaaaaaaaaaaaaaaaaaa\n");
+
+    if(_uav_position_setpoint_pub == nullptr)
+    {
+        _uav_position_setpoint_pub = orb_advertise(ORB_ID(uav_position_setpoint), &xyz_data_orb);
+    }
+    else
+    {
+        orb_publish(ORB_ID(uav_position_setpoint), _uav_position_setpoint_pub, &xyz_data_orb);
+    }
+
+}
+//-----------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------
+void
+MavlinkReceiver::handle_message_uav_position_feedback(mavlink_message_t *msg)
+{
+    mavlink_uav_position_feedback_t xyz_data_mavlink;
+    mavlink_msg_uav_position_feedback_decode(msg, &xyz_data_mavlink);
+
+    struct uav_position_feedback_s xyz_data_orb;
+    memset(&xyz_data_orb, 0, sizeof(xyz_data_orb));
+
+    xyz_data_orb.timestamp_boot = hrt_absolute_time();
+    xyz_data_orb.x = xyz_data_mavlink.x;
+    xyz_data_orb.y = xyz_data_mavlink.y;
+    xyz_data_orb.z = xyz_data_mavlink.z;
+
+    if(_uav_position_feedback_pub == nullptr)
+    {
+        _uav_position_feedback_pub = orb_advertise(ORB_ID(uav_position_feedback), &xyz_data_orb);
+    }
+    else
+    {
+        orb_publish(ORB_ID(uav_position_feedback), _uav_position_feedback_pub, &xyz_data_orb);
+    }
+}
+//------------------------------------------------------------------------------------------------------------------
+
 
 void
 MavlinkReceiver::handle_message_command_long(mavlink_message_t *msg)

@@ -45,6 +45,14 @@
 
 #include <drivers/drv_orb_dev.h>
 
+//------------------------------------------------------------------------------
+#include "topics/uav_position_setpoint.h"
+ORB_DEFINE(uav_position_setpoint, struct uav_position_setpoint_s);
+#include "topics/uav_position_feedback.h"
+ORB_DEFINE(uav_position_feedback, struct uav_position_feedback_s);
+//-------------------------------------------------------------------------------
+
+
 #include "topics/sensor_mag.h"
 ORB_DEFINE(sensor_mag, struct sensor_mag_s);
 

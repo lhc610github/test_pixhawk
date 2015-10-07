@@ -148,7 +148,12 @@ MODULES		+= examples/rover_steering_control
 
 # Tutorial code from
 # https://px4.io/dev/daemon
-#MODULES		+= examples/px4_daemon_app
+#
+#
+#------------------------------------------------------------------
+MODULES		+= examples/px4_daemon_app
+#------------------------------------------------------------------
+
 
 # Tutorial code from
 # https://px4.io/dev/debug_values

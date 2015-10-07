@@ -46,6 +46,11 @@
 #include <px4_config.h>
 #include <nuttx/sched.h>
 
+#include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/uav_position_setpoint.h>
+#include <uORB/topics/uav_position_feedback.h>
+#include <uORB/topics/vehicle_local_position.h>
+
 #include <systemlib/systemlib.h>
 #include <systemlib/err.h>
 
@@ -105,9 +110,17 @@ int px4_daemon_app_main(int argc, char *argv[])
 		daemon_task = px4_task_spawn_cmd("daemon",
 						 SCHED_DEFAULT,
 						 SCHED_PRIORITY_DEFAULT,
-						 2000,
+						 1000,
 						 px4_daemon_thread_main,
 						 (argv) ? (char *const *)&argv[2] : (char *const *)NULL);
+
+/*        daemon_task = px4_task_spawn_cmd("daemon_send",
+						 SCHED_DEFAULT,
+						 SCHED_PRIORITY_DEFAULT,
+						 2000,
+						 px4_daemon_send_thread_main,
+						 (argv) ? (char *const *)&argv[2] : (char *const *)NULL);
+*/
 		return 0;
 	}
 
@@ -131,16 +144,79 @@ int px4_daemon_app_main(int argc, char *argv[])
 	return 1;
 }
 
+
+
+//-------------------------------------------------------------------------------------------------------------
 int px4_daemon_thread_main(int argc, char *argv[])
 {
 
 	warnx("[daemon] starting\n");
 
-	thread_running = true;
+    int uav_position_feedback_sub;
+    struct uav_position_feedback_s mocap_data;
+    memset(&mocap_data, 0, sizeof(mocap_data));
+    uav_position_feedback_sub = orb_subscribe(ORB_ID(uav_position_feedback)); 
 
+
+    int uav_position_setpoint_sub;
+    struct uav_position_setpoint_s xyz_d;
+    memset(&xyz_d, 0, sizeof(xyz_d));
+    uav_position_setpoint_sub = orb_subscribe(ORB_ID(uav_position_setpoint));
+
+
+    int vehicle_attitude_sub;
+    struct vehicle_attitude_s att_data;
+    memset(&att_data, 0, sizeof(att_data));
+    vehicle_attitude_sub = orb_subscribe(ORB_ID(vehicle_attitude));
+
+    
+    int vehicle_local_position_sub;
+    struct vehicle_local_position_s xyz;
+    memset(&xyz, 0, sizeof(xyz));
+    vehicle_local_position_sub = orb_subscribe(ORB_ID(vehicle_local_position));
+
+
+    bool updated;
+
+	thread_running = true;
+    int i = 0;
 	while (!thread_should_exit) {
-		warnx("Hello daemon!\n");
-		sleep(10);
+		//warnx("Hello daemon!");
+        printf("Hello daemon:%d\n", ++i);
+
+        orb_check(uav_position_feedback_sub, &updated);
+        if(updated)
+        {
+            orb_copy(ORB_ID(uav_position_feedback), uav_position_feedback_sub, &mocap_data);
+            printf("---------------mocap data is--------------\n");
+            printf("\tx=%8.4f, y=%8.4f, z=%8.4f\n", (double)mocap_data.x, (double)mocap_data.y, (double)mocap_data.z);
+        }
+        
+        orb_check(uav_position_setpoint_sub, &updated);
+        if(updated)
+        {
+            orb_copy(ORB_ID(uav_position_setpoint), uav_position_setpoint_sub, &xyz_d);
+            printf("---------------uav position setpoint is-------------------\n");
+            printf("\tx_d=%8.4f, y_d=%8.4f, z_d=%8.4f, yaw_d=%8.4f\n", (double)xyz_d.x_d, (double)xyz_d.y_d, (double)xyz_d.z_d, (double)xyz_d.yaw_d);
+        }
+        
+        orb_check(vehicle_attitude_sub, &updated);
+        if(updated)
+        {
+            orb_copy(ORB_ID(vehicle_attitude), vehicle_attitude_sub, &att_data);
+            printf("---------------attitude data is--------------\n");
+            printf("\troll=%8.4f, pitch=%8.4f, yaw=%8.4f\n", (double)att_data.roll, (double)att_data.pitch, (double)att_data.yaw);
+        }
+
+        orb_check(vehicle_local_position_sub, &updated);
+        if(updated)
+        {
+            orb_copy(ORB_ID(vehicle_local_position), vehicle_local_position_sub, &xyz);
+            printf("---------------local position data is--------------\n");
+            printf("\tx=%8.4f, y=%8.4f, z=%8.4f\n", (double)xyz.x, (double)xyz.y, (double)xyz.z);
+        }
+
+		usleep(100000);
 	}
 
 	warnx("[daemon] exiting.\n");
@@ -149,3 +225,47 @@ int px4_daemon_thread_main(int argc, char *argv[])
 
 	return 0;
 }
+
+//-------------------------------------------------------------------------------------------------------------
+
+/*
+int px4_daemon_send_thread_main(int argc, char *argv[])
+{
+
+	warnx("[daemon_send] starting\n");
+
+    orb_advert_t uav_position_and_reference_pub;
+    struct uav_position_and_reference_s xyz_data;
+    xyz_data.x = 0.1;
+    xyz_data.y = 0.2;
+    xyz_data.z = 0.3;
+    xyz_data.x_d = 0.4;
+    xyz_data.y_d = 0.5;
+    xyz_data.z_d = 0.6;
+    xyz_data.yaw_d = 0.7;
+    uav_position_and_reference_pub = orb_advertise(ORB_ID(uav_position_and_reference), &xyz_data);
+
+    thread_running = true;
+
+	while (!thread_should_exit)
+    {
+        xyz_data.x += 1;
+        xyz_data.y += 1;
+        xyz_data.z += 1;
+        xyz_data.x_d += 1;
+        xyz_data.y_d += 1;
+        xyz_data.z_d += 1;
+        xyz_data.yaw_d += 1;
+        orb_publish(ORB_ID(uav_position_and_reference), uav_position_and_reference_pub, &xyz_data);
+        sleep(4);
+    }
+
+	warnx("[daemon_send] exiting.\n");
+
+	thread_running = false;
+
+	return 0;
+}
+*/
+
+

@@ -62,7 +62,14 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vision_position_estimate.h>
+
+
+//-------------------------------------------------------------
+#include <uORB/topics/uav_position_feedback.h>
 #include <uORB/topics/att_pos_mocap.h>
+//------------------------------------------------------------
+
+
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/optical_flow.h>
 #include <mavlink/mavlink_log.h>
@@ -347,9 +354,17 @@ int position_estimator_inav_thread_main(int argc, char *argv[])
 	memset(&flow, 0, sizeof(flow));
 	struct vision_position_estimate_s vision;
 	memset(&vision, 0, sizeof(vision));
-	struct att_pos_mocap_s mocap;
-	memset(&mocap, 0, sizeof(mocap));
-	struct vehicle_global_position_s global_pos;
+
+
+	//struct att_pos_mocap_s mocap;
+	//memset(&mocap, 0, sizeof(mocap));
+    //----------------------------------------------------------
+    struct uav_position_feedback_s mocap;
+    memset(&mocap, 0, sizeof(mocap));
+    //----------------------------------------------------------
+    
+
+    struct vehicle_global_position_s global_pos;
 	memset(&global_pos, 0, sizeof(global_pos));
 
 	/* subscribe */
@@ -361,8 +376,15 @@ int position_estimator_inav_thread_main(int argc, char *argv[])
 	int optical_flow_sub = orb_subscribe(ORB_ID(optical_flow));
 	int vehicle_gps_position_sub = orb_subscribe(ORB_ID(vehicle_gps_position));
 	int vision_position_estimate_sub = orb_subscribe(ORB_ID(vision_position_estimate));
-	int att_pos_mocap_sub = orb_subscribe(ORB_ID(att_pos_mocap));
-	int home_position_sub = orb_subscribe(ORB_ID(home_position));
+
+
+	//int att_pos_mocap_sub = orb_subscribe(ORB_ID(att_pos_mocap));
+    //----------------------------------------------------------------------------------------
+	int uav_position_feedback_sub = orb_subscribe(ORB_ID(uav_position_feedback));
+    //---------------------------------------------------------------------------------------
+
+    
+    int home_position_sub = orb_subscribe(ORB_ID(home_position));
 
 	/* advertise */
 	orb_advert_t vehicle_local_position_pub = orb_advertise(ORB_ID(vehicle_local_position), &local_pos);
@@ -726,11 +748,14 @@ int position_estimator_inav_thread_main(int argc, char *argv[])
 				}
 			}
 
-			/* vehicle mocap position */
-			orb_check(att_pos_mocap_sub, &updated);
 
+
+			/* vehicle mocap position */
+			//orb_check(att_pos_mocap_sub, &updated);
+            //---------------------------------------------------------------------------------------------
+            orb_check(uav_position_feedback_sub, &updated);
 			if (updated) {
-				orb_copy(ORB_ID(att_pos_mocap), att_pos_mocap_sub, &mocap);
+				orb_copy(ORB_ID(uav_position_feedback), uav_position_feedback_sub, &mocap);
 
 				/* reset position estimate on first mocap update */
 				if (!mocap_valid) {
@@ -751,6 +776,9 @@ int position_estimator_inav_thread_main(int argc, char *argv[])
 
 				mocap_updates++;
 			}
+            //----------------------------------------------------------------------------------------------
+            
+            
 
 			/* vehicle GPS position */
 			orb_check(vehicle_gps_position_sub, &updated);
@@ -1034,6 +1062,12 @@ int position_estimator_inav_thread_main(int argc, char *argv[])
 			accel_bias_corr[0] -= corr_flow[0] * params.w_xy_flow;
 			accel_bias_corr[1] -= corr_flow[1] * params.w_xy_flow;
 		}
+
+
+        //----------------------------------
+        corr_baro = 0.0f;
+        //----------------------------------
+        
 
 		accel_bias_corr[2] -= corr_baro * params.w_z_baro * params.w_z_baro;
 
