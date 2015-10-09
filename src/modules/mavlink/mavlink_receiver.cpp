@@ -315,7 +315,7 @@ MavlinkReceiver::handle_message_uav_position_setpoint(mavlink_message_t *msg)
     xyz_data_orb.z_d = xyz_data_mavlink.z_d;
     xyz_data_orb.yaw_d = xyz_data_mavlink.yaw_d;
 
-	printf("aaaaaaaaaaaaaaaaaaaaaaaa\n");
+	//printf("aaaaaaaaaaaaaaaaaaaaaaaa\n");
 
     if(_uav_position_setpoint_pub == nullptr)
     {

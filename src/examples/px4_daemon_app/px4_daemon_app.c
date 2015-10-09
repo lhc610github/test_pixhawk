@@ -163,7 +163,7 @@ int px4_daemon_thread_main(int argc, char *argv[])
     memset(&xyz_d, 0, sizeof(xyz_d));
     uav_position_setpoint_sub = orb_subscribe(ORB_ID(uav_position_setpoint));
 
-
+/*
     int vehicle_attitude_sub;
     struct vehicle_attitude_s att_data;
     memset(&att_data, 0, sizeof(att_data));
@@ -174,7 +174,7 @@ int px4_daemon_thread_main(int argc, char *argv[])
     struct vehicle_local_position_s xyz;
     memset(&xyz, 0, sizeof(xyz));
     vehicle_local_position_sub = orb_subscribe(ORB_ID(vehicle_local_position));
-
+*/
 
     bool updated;
 
@@ -199,7 +199,7 @@ int px4_daemon_thread_main(int argc, char *argv[])
             printf("---------------uav position setpoint is-------------------\n");
             printf("\tx_d=%8.4f, y_d=%8.4f, z_d=%8.4f, yaw_d=%8.4f\n", (double)xyz_d.x_d, (double)xyz_d.y_d, (double)xyz_d.z_d, (double)xyz_d.yaw_d);
         }
-        
+        /*
         orb_check(vehicle_attitude_sub, &updated);
         if(updated)
         {
@@ -215,7 +215,7 @@ int px4_daemon_thread_main(int argc, char *argv[])
             printf("---------------local position data is--------------\n");
             printf("\tx=%8.4f, y=%8.4f, z=%8.4f\n", (double)xyz.x, (double)xyz.y, (double)xyz.z);
         }
-
+*/
 		usleep(100000);
 	}
 
