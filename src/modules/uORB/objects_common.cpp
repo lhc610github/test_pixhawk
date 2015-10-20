@@ -50,6 +50,8 @@
 ORB_DEFINE(uav_position_setpoint, struct uav_position_setpoint_s);
 #include "topics/uav_position_feedback.h"
 ORB_DEFINE(uav_position_feedback, struct uav_position_feedback_s);
+#include "topics/uav_type.h"
+ORB_DEFINE(uav_type, struct uav_type_s);
 //-------------------------------------------------------------------------------
 
 

@@ -77,6 +77,7 @@
 
 //-----------------------------------------------------
 #include <uORB/topics/uav_position_setpoint.h>
+#include <uORB/topics/uav_type.h>
 //-----------------------------------------------------
 
 #include <uORB/topics/position_setpoint_triplet.h>
@@ -142,6 +143,7 @@ private:
 
 //-------------------------------------------
     int     _uav_position_setpoint_sub;
+    int     _uav_type_sub;
 //-------------------------------------------
 
 	int		_pos_sp_triplet_sub;		/**< position setpoint triplet */
@@ -163,6 +165,7 @@ private:
 
 //-------------------------------------------------------------
     struct uav_position_setpoint_s          _xyz_data;
+    struct uav_type_s         _xyz_type;
 //-------------------------------------------------------------
 
 
@@ -333,6 +336,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 //-------------------------------------------
     _uav_position_setpoint_sub(-1),
+    _uav_type_sub(-1),
 //-------------------------------------------
 
 
@@ -363,6 +367,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 //------------------------------------------------------
     memset(&_xyz_data, 0, sizeof(_xyz_data));
+    memset(&_xyz_type, 0, sizeof(_xyz_type));
 //------------------------------------------------------
 
 
@@ -565,6 +570,9 @@ MulticopterPositionControl::poll_subscriptions()
 //--------------------------------------------------------------------------------------
 	if (updated) {
 		orb_copy(ORB_ID(uav_position_setpoint), _uav_position_setpoint_sub, &_xyz_data);
+	}
+	if (updated) {
+		orb_copy(ORB_ID(uav_type), _uav_type_sub, &_xyz_type);
 	}
 //--------------------------------------------------------------------------------------
 
@@ -975,6 +983,7 @@ MulticopterPositionControl::task_main()
 
 //----------------------------------------------------------------------------------
     _uav_position_setpoint_sub = orb_subscribe(ORB_ID(uav_position_setpoint));
+    _uav_type_sub = orb_subscribe(ORB_ID(uav_type));
 //---------------------------------------------------------------------------------
 
 
@@ -1031,7 +1040,7 @@ MulticopterPositionControl::task_main()
 			continue;
 		}
 
-		poll_subscriptions();
+		poll_subscriptions(); /////sub
 		parameters_update(false);
 
 		hrt_abstime t = hrt_absolute_time();
@@ -1120,8 +1129,10 @@ MulticopterPositionControl::task_main()
             //-------------------------------------------
 
 
-
-			if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_IDLE) {
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//			if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_IDLE) {
+            	if (!_control_mode.flag_control_manual_enabled && (int)_xyz_type.type == 1) {
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 				/* idle state, don't run controller and set zero thrust */
 				R.identity();
 				memcpy(&_att_sp.R_body[0], R.data, sizeof(_att_sp.R_body));
@@ -1173,11 +1184,16 @@ MulticopterPositionControl::task_main()
 					_vel_sp(0) = 0.0f;
 					_vel_sp(1) = 0.0f;
 				}
-
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 				/* use constant descend rate when landing, ignore altitude setpoint */
-				if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
-					_vel_sp(2) = _params.land_speed;
+	//			if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+				if (!_control_mode.flag_control_manual_enabled && (int)_xyz_type.type == 2) {
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+					_vel_sp(2) = _params.land_speed;//1
+					//printf("land_speed :%.2f \n",_params.land_speed );
 				}
+ 				
+
 
 				_global_vel_sp.vx = _vel_sp(0);
 				_global_vel_sp.vy = _vel_sp(1);
@@ -1258,12 +1274,15 @@ MulticopterPositionControl::task_main()
 					}
 
 					float tilt_max = _params.tilt_max_air;
-
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 					/* adjust limits for landing mode */
-					if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid &&
-					  	_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+//					if (!_control_mode.flag_control_manual_enabled && _pos_sp_triplet.current.valid &&
+//					  	_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_LAND) {
+					if (!_control_mode.flag_control_manual_enabled &&
+					  	(int)_xyz_type.type == 2) {
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 						/* limit max tilt and min lift when landing */
-						tilt_max = _params.tilt_max_land;
+						tilt_max = _params.tilt_max_land;//15
 
 						if (thr_min < 0.0f) {
 							thr_min = 0.0f;

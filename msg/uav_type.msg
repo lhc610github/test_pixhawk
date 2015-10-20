@@ -1,0 +1,6 @@
+uint32 type
+uint8 flage_position
+uint8 flage_velocity
+uint8 flage_altitude
+uint8 flage_attitude
+uint8 flage_climb

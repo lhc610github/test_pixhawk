@@ -49,6 +49,7 @@
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/uav_position_setpoint.h>
 #include <uORB/topics/uav_position_feedback.h>
+ #include <uORB/topics/uav_type.h>
 #include <uORB/topics/vehicle_local_position.h>
 
 #include <systemlib/systemlib.h>
@@ -163,6 +164,10 @@ int px4_daemon_thread_main(int argc, char *argv[])
     memset(&xyz_d, 0, sizeof(xyz_d));
     uav_position_setpoint_sub = orb_subscribe(ORB_ID(uav_position_setpoint));
 
+    int uav_type_sub;
+    struct uav_type_s xyz_type;
+    memset(&xyz_type, 0, sizeof(xyz_type));
+    uav_type_sub = orb_subscribe(ORB_ID(uav_type));
 /*
     int vehicle_attitude_sub;
     struct vehicle_attitude_s att_data;
@@ -197,7 +202,37 @@ int px4_daemon_thread_main(int argc, char *argv[])
         {
             orb_copy(ORB_ID(uav_position_setpoint), uav_position_setpoint_sub, &xyz_d);
             printf("---------------uav position setpoint is-------------------\n");
-            printf("\tx_d=%8.4f, y_d=%8.4f, z_d=%8.4f, yaw_d=%8.4f\n", (double)xyz_d.x_d, (double)xyz_d.y_d, (double)xyz_d.z_d, (double)xyz_d.yaw_d);
+            printf("\tx_d=%8.4f, y_d=%8.4f, z_d=%8.4f, yaw_d=%8.4f \n", (double)xyz_d.x_d, (double)xyz_d.y_d, (double)xyz_d.z_d, (double)xyz_d.yaw_d);
+        
+
+
+        }
+
+
+        orb_check(uav_type_sub, &updated);
+        if(updated)
+        {
+                        printf("---------------uav type is-------------------\n");
+            orb_copy(ORB_ID(uav_type), uav_type_sub, &xyz_type);
+            if ((int)xyz_type.type == 0)
+            printf("type : normal\n");
+            else
+                if ((int)xyz_type.type == 1)
+                    printf("type : idel\n");
+                    else
+                        if ((int)xyz_type.type == 2)
+                            printf("type : land\n");
+                             else
+                                if ((int)xyz_type.type == 3)
+                                    printf("type : takeoff\n");
+                                else
+                                    printf("type mistake !!!\n");
+
+            if ((bool)xyz_type.flage_position)
+                printf("flag_position: 1\n");
+            else
+                printf("flag_position: 0\n");
+
         }
         /*
         orb_check(vehicle_attitude_sub, &updated);

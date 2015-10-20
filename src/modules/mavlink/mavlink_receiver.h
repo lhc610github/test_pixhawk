@@ -79,6 +79,7 @@
 //---------------------------------------------------------------
 #include <uORB/topics/uav_position_feedback.h>
 #include <uORB/topics/uav_position_setpoint.h>
+#include <uORB/topics/uav_type.h>
 //----------------------------------------------------------------
 
 
@@ -149,6 +150,7 @@ private:
 //------------------------------------------------------------------------------    
     void handle_message_uav_position_feedback(mavlink_message_t *msg);
     void handle_message_uav_position_setpoint(mavlink_message_t *msg);
+    void handle_message_uav_type(mavlink_message_t *msg);
 //------------------------------------------------------------------------------
 
 
@@ -212,6 +214,7 @@ private:
 //----------------------------------------------------
     orb_advert_t _uav_position_feedback_pub;
     orb_advert_t _uav_position_setpoint_pub;
+    orb_advert_t _uav_type_pub;
 //-----------------------------------------------------
 
 	int _control_mode_sub;

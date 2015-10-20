@@ -89,8 +89,9 @@ __BEGIN_DECLS
 
 __END_DECLS
 
-//static int demo_i = 0; 
-
+static int demo_i = 0; 
+static int demo_i1 = 0;
+static int demo_i2 = 0;
 static const float mg2ms2 = CONSTANTS_ONE_G / 1000.0f;
 
 MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
@@ -132,6 +133,7 @@ MavlinkReceiver::MavlinkReceiver(Mavlink *parent) :
 //---------------------------------------------------------------------
     _uav_position_feedback_pub(nullptr),
     _uav_position_setpoint_pub(nullptr),
+    _uav_type_pub(nullptr),
 //----------------------------------------------------------------------
 
 
@@ -236,15 +238,20 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 
     
 //----------------------------------------------------------------------
-    case MAVLINK_MSG_ID_UAV_POSITION_FEEDBACK:
+    case MAVLINK_MSG_ID_UAV_POSITION_FEEDBACK:        
+    printf("\n----POS FEEDBACK%d----\n", ++demo_i1);
         handle_message_uav_position_feedback(msg);
         break;
 
     case MAVLINK_MSG_ID_UAV_POSITION_SETPOINT:
-        //printf("\n----%d----\n", ++demo_i);
+        printf("\n----POS SET%d----\n", ++demo_i);
         handle_message_uav_position_setpoint(msg);
         //printf("\n----%d----\n", demo_i);
         break;
+    case MAVLINK_MSG_ID_UAV_TYPE:
+        printf("\n----POS type%d----\n", ++demo_i2);
+    	handle_message_uav_type(msg);
+    	break;
 //----------------------------------------------------------------------
 
 
@@ -314,7 +321,7 @@ MavlinkReceiver::handle_message_uav_position_setpoint(mavlink_message_t *msg)
     xyz_data_orb.y_d = xyz_data_mavlink.y_d;
     xyz_data_orb.z_d = xyz_data_mavlink.z_d;
     xyz_data_orb.yaw_d = xyz_data_mavlink.yaw_d;
-
+    // xyz_data_orb.type = xyz_data_mavlink.type;
 	//printf("aaaaaaaaaaaaaaaaaaaaaaaa\n");
 
     if(_uav_position_setpoint_pub == nullptr)
@@ -353,6 +360,39 @@ MavlinkReceiver::handle_message_uav_position_feedback(mavlink_message_t *msg)
     }
 }
 //------------------------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------
+void
+MavlinkReceiver::handle_message_uav_type(mavlink_message_t *msg)
+{
+    mavlink_uav_type_t xyz_type_mavlink;
+    mavlink_msg_uav_type_decode(msg, &xyz_type_mavlink);
+
+    struct uav_type_s xyz_type_orb;
+    memset(&xyz_type_orb, 0, sizeof(xyz_type_orb));
+	//printf("bbbbbbbbbbbbbbbbbbbbbb\n");
+
+    // xyz_type_orb.timestamp_boot = hrt_absolute_time();
+	xyz_type_orb.type = xyz_type_mavlink.type;
+	xyz_type_orb.flage_position = xyz_type_mavlink.flage_position;
+	xyz_type_orb.flage_velocity = xyz_type_mavlink.flage_velocity;
+	xyz_type_orb.flage_altitude = xyz_type_mavlink.flage_altitude;
+	xyz_type_orb.flage_attitude = xyz_type_mavlink.flage_attitude;
+	xyz_type_orb.flage_climb = xyz_type_mavlink.flage_climb;
+
+  
+    if(_uav_type_pub == nullptr)
+    {
+        _uav_type_pub = orb_advertise(ORB_ID(uav_type), &xyz_type_orb);
+    }
+    else
+    {
+        orb_publish(ORB_ID(uav_type), _uav_type_pub, &xyz_type_orb);
+    }
+}
+//------------------------------------------------------------------------------------------------------------------
+
+
+
 
 
 void
